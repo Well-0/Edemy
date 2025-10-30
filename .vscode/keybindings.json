@@ -1,0 +1,12 @@
+[
+    {
+        "key": "ctrl+shift+r",
+        "command": "workbench.action.debug.start",
+        "when": "!inDebugMode"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Clean Build"
+    }
+]
