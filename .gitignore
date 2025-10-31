@@ -43,3 +43,12 @@
 #ignore CMake build folder
 build/
 *.github
+
+#igore VS Code settings folder
+.vscode/
+
+#ignore dist folder
+dist/
+
+#ignore node_modules
+node_modules/

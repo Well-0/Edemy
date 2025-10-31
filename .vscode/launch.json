@@ -13,6 +13,16 @@
       "args": ["."],
       "outputCapture": "std",
       "preLaunchTask": "TypeScript Build"
+    },
+    {
+      "name": "NPM Auto-Rebuild",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "args": ["run", "watch"],
+      "outputCapture": "std"
     }
+    
   ]
 }
