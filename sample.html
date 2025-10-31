@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
+    <title>Edemy - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-section {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section:hover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+        
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .upload-text {
+            font-size: 20px;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .upload-hint {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        
+        .file-types {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .file-type {
+            background: #edf2f7;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .recent-files {
+            margin-top: 40px;
+        }
+        
+        .recent-title {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .file-item:hover {
+            background: #edf2f7;
+            transform: translateX(4px);
+        }
+        
+        .file-icon {
+            font-size: 24px;
+            margin-right: 16px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            color: #2d3748;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .file-date {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Edemy</h1>
+        <p class="subtitle">Load your learning materials and start your journey</p>
+        
+        <div class="upload-section" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to browse or drag files here</div>
+            <div class="upload-hint">Select videos, PDFs, documents, or course materials</div>
+        </div>
+        
+        <input type="file" id="fileInput" multiple accept=".pdf,.mp4,.avi,.mkv,.docx,.pptx,.txt">
+        
+        <div class="file-types">
+            <div class="file-type">📄 PDF</div>
+            <div class="file-type">🎥 Video</div>
+            <div class="file-type">📝 Documents</div>
+            <div class="file-type">📊 Presentations</div>
+        </div>
+        
+        <div class="recent-files">
+            <div class="recent-title">Recent Files</div>
+            <div class="file-list" id="fileList">
+                <div class="file-item">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name">No files loaded yet</div>
+                        <div class="file-date">Load your first file to get started</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const $ = require('jquery');
+        const { dialog } = require('@electron/remote');
+        const path = require('path');
+        const fs = require('fs');
+        
+        // Apply additional styles via jQuery (matching your project pattern)
+        $('body').css({
+            'overflow-y': 'auto'
+        });
+        
+        // Upload area click handler
+        $('#uploadArea').on('click', function() {
+            $('#fileInput').click();
+        });
+        
+        // File input change handler
+        $('#fileInput').on('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+        
+        // Drag and drop handlers
+        $('#uploadArea').on('dragover', function(e) {
+            e.preventDefault();
+            $(this).css('border-color', '#667eea');
+            $(this).css('background-color', '#f7fafc');
+        });
+        
+        $('#uploadArea').on('dragleave', function(e) {
+            e.preventDefault();
+            $(this).css('border-color', '#cbd5e0');
+            $(this).css('background-color', 'transparent');
+        });
+        
+        $('#uploadArea').on('drop', function(e) {
+            e.preventDefault();
+            $(this).css('border-color', '#cbd5e0');
+            $(this).css('background-color', 'transparent');
+            
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+        
+        function handleFiles(files) {
+            console.log('Files loaded:', files.length);
+            
+            // Clear "no files" message
+            $('#fileList').empty();
+            
+            // Process each file
+            Array.from(files).forEach(file => {
+                const fileItem = createFileItem(file);
+                $('#fileList').append(fileItem);
+            });
+        }
+        
+        function createFileItem(file) {
+            const ext = path.extname(file.name).toLowerCase();
+            let icon = '📄';
+            
+            if (['.mp4', '.avi', '.mkv', '.mov'].includes(ext)) icon = '🎥';
+            else if (['.pdf'].includes(ext)) icon = '📕';
+            else if (['.docx', '.doc'].includes(ext)) icon = '📝';
+            else if (['.pptx', '.ppt'].includes(ext)) icon = '📊';
+            
+            const date = new Date(file.lastModified).toLocaleDateString();
+            const size = (file.size / 1024 / 1024).toFixed(2);
+            
+            return $(`
+                <div class="file-item">
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-date">${date} • ${size} MB</div>
+                    </div>
+                </div>
+            `).on('click', function() {
+                console.log('Opening file:', file.path);
+                // Navigate to player/viewer page
+                // window.location.href = 'file://' + path.join(__dirname, 'player.html') + '?file=' + encodeURIComponent(file.path);
+            });
+        }
+        
+        console.log('Home page loaded successfully');
+    </script>
+</body>
+</html>

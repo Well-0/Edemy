@@ -1,3 +1,4 @@
+const { nativeTheme } = require('electron');
 import { app, BrowserWindow, Menu, MenuItem } from 'electron';
 import * as path from 'path';
 
@@ -19,82 +20,111 @@ function createWindow(): void {
     console.log(`[Renderer] ${message}`);
   });
 
-  // Set custom menu where Window > Close navigates to homepage
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: 'File',
-      submenu: [
-        { role: 'quit' }
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' }
-      ]
-    },
-    {
-      label: 'Window',
-      submenu: [
-        { role: 'minimize' },
-        { 
-          label: 'Close',
-          click: () => win.loadFile(path.join(__dirname, '../src/index.html'))
-        },
-        { type: 'separator' },
-        { role: 'front' }
-      ]
-      //keep the same Help menu
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'Learn More',
-          click: async () => {
-            const { shell } = require('electron');
-            await shell.openExternal('https://electronjs.org');
+  // Build and set custom menu
+  function buildMenu() {
+    const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: 'File',
+        submenu: [
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' }
+        ]
+      },
+      {
+        label: 'View',
+        submenu: [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          {
+            label: 'Theme',
+            submenu: [
+              {
+                label: 'System',
+                type: 'radio',
+                checked: nativeTheme.themeSource === 'system',
+                click: () => { nativeTheme.themeSource = 'system'; Menu.setApplicationMenu(buildMenu()); }
+              },
+              {
+                label: 'Light',
+                type: 'radio',
+                checked: nativeTheme.themeSource === 'light',
+                click: () => { nativeTheme.themeSource = 'light'; Menu.setApplicationMenu(buildMenu()); }
+              },
+              {
+                label: 'Dark',
+                type: 'radio',
+                checked: nativeTheme.themeSource === 'dark',
+                click: () => { nativeTheme.themeSource = 'dark'; Menu.setApplicationMenu(buildMenu()); }
+              }
+            ]
           }
-        },
-        {
-          label: 'Documentation',
-          click: async () => {
-            const { shell } = require('electron');
-            await shell.openExternal('https://electronjs.org/docs');
+        ]
+      },
+      {
+        label: 'Window',
+        submenu: [
+          { role: 'minimize' },
+          { 
+            label: 'Close',
+            click: () => win.loadFile(path.join(__dirname, '../src/index.html'))
+          },
+          { type: 'separator' },
+          { role: 'front' }
+        ]
+      },
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: 'Learn More',
+            click: async () => {
+              const { shell } = require('electron');
+              await shell.openExternal('https://electronjs.org');
+            }
+          },
+          {
+            label: 'Documentation',
+            click: async () => {
+              const { shell } = require('electron');
+              await shell.openExternal('https://electronjs.org/docs');
+            }
+          },
+          {
+            label: 'Community Discussions',
+            click: async () => {
+              const { shell } = require('electron');
+              await shell.openExternal('https://www.electronjs.org/community');
+            }
+          },
+          {
+            label: 'Search Issues',
+            click: async () => {
+              const { shell } = require('electron');
+              await shell.openExternal('https://github.com/electron/electron/issues');
+            }
           }
-        },
-        {
-          label: 'Community Discussions',
-          click: async () => {
-            const { shell } = require('electron');
-            await shell.openExternal('https://www.electronjs.org/community');
-          }
-        },
-        {
-          label: 'Search Issues',
-          click: async () => {
-            const { shell } = require('electron');
-            await shell.openExternal('https://github.com/electron/electron/issues');
-          }
-        }
-      ]
-    }
-  ];
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+        ]
+      }
+    ];
+    return Menu.buildFromTemplate(template);
+  }
+
+  Menu.setApplicationMenu(buildMenu());
+
+  nativeTheme.on('updated', () => {
+    Menu.setApplicationMenu(buildMenu());
+  });
 }
 
 app.whenReady().then(createWindow);
