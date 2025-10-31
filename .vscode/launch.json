@@ -12,6 +12,7 @@
       },
       "args": ["."],
       "outputCapture": "std",
+      "console": "integratedTerminal",
       "preLaunchTask": "TypeScript Build"
     },
     {

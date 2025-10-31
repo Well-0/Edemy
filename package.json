@@ -24,7 +24,8 @@
     "appId": "com.learningplatform.app",
     "files": [
       "dist/**/*",
-      "src/index.html"
+      "src/index.html",
+      "src/html/**/*"
     ],
     "win": {
       "target": "nsis"
