@@ -1,6 +1,6 @@
 Store user-imported files in the **app's userData directory** with organized subfolders:
 
-```typescript
+```TypeScript
 // src/ts/file-manager.ts
 import * as fs from 'fs';
 import * as path from 'path';
@@ -70,7 +70,7 @@ export class FileManager {
 
 **Setup IPC in main.ts:**
 
-```typescript
+```TypeScript
 // src/main.ts
 import { FileManager } from './ts/file-manager';
 
@@ -95,7 +95,7 @@ ipcMain.handle('delete-file', (_, type: string, fileName: string) => {
 
 **Use in renderer:**
 
-```typescript
+```TypeScript
 // src/ts/course-page.ts
 import { ipcRenderer } from 'electron';
 
@@ -114,6 +114,7 @@ async function loadVideo(fileName: string) {
 ```
 
 **File structure:**
+
 ```
 C:\Users\Username\AppData\Roaming\edemy\
   └── user-files\

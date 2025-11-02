@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Lesson } from '../types/Lesson';
-import  './LessonCard.css';
+import  '../css/LessonCard.css';
 
 interface LessonCardProps {
   lesson: Lesson;
