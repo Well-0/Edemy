@@ -8,7 +8,19 @@
       "request": "launch",
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/frontend/src",
-      "preLaunchTask": "Start Vite Dev Server"
+      "preLaunchTask": "Start Vite Dev Server",
+      
+    
+    },
+    {
+      "name": "NPM Run Build",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "args": ["run", "build"],
+      "outputCapture": "std",
+      "console": "integratedTerminal"
     },
 
     {

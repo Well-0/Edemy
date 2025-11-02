@@ -34,6 +34,8 @@ Frontend: Install Node.js (>=18). From frontend/, install npm packages:
 npm install
 ```
 
+The Tailwind CSS toolchain uses the PostCSS plugin from `@tailwindcss/postcss`. Keep the Tailwind config in `frontend/tailwind.config.cjs` and the PostCSS pipeline in `frontend/postcss.config.cjs` so Node treats them as CommonJS modules while the project `package.json` uses ES modules.
+
 ## Running the App
 
 Start the backend server
