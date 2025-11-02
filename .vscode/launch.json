@@ -1,6 +1,16 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
+    {
+      "name": "Launch Frontend",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "Start Vite Dev Server"
+    },
+
     {
       "name": "Run Electron App",
       "type": "node",

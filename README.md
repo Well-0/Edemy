@@ -1,62 +1,57 @@
 # Edemy
 
+Edemy is a two-tier learning platform example with a C++ REST backend and a React + Vite frontend.
 
+## Project Structure
 
-# Install dependencies
+```cmd
+/DAIN
+├── backend/
+│   ├── src/
+│   │   └── main.cpp
+│   └── CMakeLists.txt
+└── frontend/
+    ├── package.json # Vite + React toolchain
+    └── src/         # React Components (Home, App, Entrypoint)
+        ├── build/
+        ├── App.tsx
+        └── components/
+            ├── Home.tsx
+            └── ...
+```
+
+## Installing Dependencies
+
+* **Backend**: Install CMake (>=3.16) and a C++17-capable compiler (MSVC, clang, or GCC). Configure once to fetch third-party libraries:
+
+  ```cmd
+  cmake -S backend -B backend/build
+  ```
+
+Frontend: Install Node.js (>=18). From frontend/, install npm packages:
 
 ```cmd
 npm install
-
 ```
 
-# Run app in development
+## Running the App
+
+Start the backend server
 
 ```cmd
-npm run build
-npm start
+cmake --build backend/build --config Release
+backend\build\Release\edemy\_backend.exe
 ```
 
-Or use my launch configuration for VSCode to run the app in debug mode.
+(On non-MSVC generators, drop --config Release and run backend/build/edemy\_backend.) The API listens on <http://localhost:8080>.
 
-'Run Electron App' config.
+Launch the frontend
 
-For Intellij IDEA, create a new Node.js run configuration with the following settings:
-- JavaScript file: `node_modules/electron/dist/electron.exe`
-- Application parameters: `.` (dot)
-- Working directory: your project root folder
-
-and import my config folder as .idea/runConfigurations to reuse the configuration.
-
-# Build executable
-
-npm run build
-
-## A project structure example
-
-```
-project/
-├── src/
-│   ├── html/
-│   │   └── home.html
-│   ├── ts/
-│   │   ├── home.ts
-│   │   └── styles.ts
-│   ├── index.html
-│   ├── main.ts
-│   └── renderer.ts
-├── dist/           (generated)
-├── moresuggestions.md
-├── package.json
-├── README.md
-├── sample.html
-├── styles.old
-├── suggestions.md
-└── tsconfig.json
-
+```cmd
+cd frontend
+npm run dev
 ```
 
-### note that you may need to adjust the build scripts in package.json to fit your project structure during development.
+Vite serves the React app at the URL printed in the terminal (defaults to <http://localhost:5173>).
 
-Creates an executable in the `dist` folder when packaged.
-
-For development with auto-rebuild, run `npm run watch` in a separate terminal
+Start the backend before opening the frontend so API requests succeed. '@" \`\`\`

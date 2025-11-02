@@ -1,4 +1,3 @@
-
 I need to clarify something important: **Docker isn't the right tool for your Electron desktop app**. Here's why and what you should use instead:
 
 ## Why Docker Doesn't Fit
@@ -12,13 +11,14 @@ I need to clarify something important: **Docker isn't the right tool for your El
 For handling **app state and loaded content**, here are the proper Electron solutions:
 
 ### 1. **electron-store** (Recommended for Settings/State)
-```bash
+
+```Shell
 npm install electron-store
 ```
 
 **Usage in your project:**
 
-```typescript
+```TypeScript
 // src/main.ts
 import Store from 'electron-store';
 
@@ -53,7 +53,7 @@ ipcMain.handle('set-state', (_, key, value) => {
 
 For course data, user progress, etc.:
 
-```typescript
+```TypeScript
 // src/ts/storage.ts
 import * as fs from 'fs';
 import * as path from 'path';
@@ -89,7 +89,7 @@ export class DataManager {
 
 For tracking what's currently loaded:
 
-```typescript
+```TypeScript
 // src/ts/session-manager.ts
 export class SessionManager {
   private currentCourse: string | null = null;
@@ -124,7 +124,7 @@ export class SessionManager {
 
 Update your `main.ts`:
 
-```typescript
+```TypeScript
 import Store from 'electron-store';
 import { DataManager } from './ts/storage';
 
@@ -165,7 +165,8 @@ function createWindow() {
 Only use this if you're building a **development container** for your workspace:
 
 **`.devcontainer/devcontainer.json`:**
-```json
+
+```JSON
 {
   "name": "Edemy Dev",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:18",
@@ -184,6 +185,6 @@ Only use this if you're building a **development container** for your workspace:
 
 But this is **only for the development environment**, not for running the Electron app itself.
 
----
+***
 
 **Which approach would you like to implement?** I recommend starting with electron-store for user preferences and a simple file-based system for course data/progress.
