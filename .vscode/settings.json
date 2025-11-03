@@ -63,7 +63,7 @@
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
-  "cmake.sourceDirectory": "C:/Users/daria/OneDrive/Documents/DAIN/backend",
+  "cmake.sourceDirectory": "C:/Users/daria/Documents/DAIN/backend",
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,

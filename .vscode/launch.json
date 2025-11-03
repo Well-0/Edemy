@@ -1,6 +1,17 @@
 {
   "version": "0.2.0",
   "configurations": [
+      {
+      "name": "Start Frontend (Production)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "args": ["start"],
+      "outputCapture": "std",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build Frontend Production"
+    },
     
     {
       "name": "Launch Frontend",
