@@ -11,7 +11,6 @@ struct Lesson {
     int id;
     std::string title;
     std::string description;
-    std::string difficulty;
     int duration; // minutes
 };
 
@@ -25,9 +24,9 @@ public:
     LessonDatabase() {
         // Initialize with sample data
         lessons = {
-            {next_id++, "Introduction to C++", "Learn the basics of C++ programming", "Beginner", 45},
-            {next_id++, "React Fundamentals", "Master React hooks and components", "Intermediate", 60},
-            {next_id++, "Advanced TypeScript", "Deep dive into TypeScript features", "Advanced", 90}
+            {next_id++, "Introduction to C++", "Learn the basics of C++ programming", 45},
+            {next_id++, "React Fundamentals", "Master React hooks and components", 60},
+            {next_id++, "Advanced TypeScript", "Deep dive into TypeScript features", 90}
         };
     }
 
@@ -47,9 +46,9 @@ public:
     }
 
     Lesson addLesson(const std::string& title, const std::string& description, 
-                     const std::string& difficulty, int duration) {
+                      int duration) {
         std::lock_guard<std::mutex> lock(mutex_);
-        Lesson lesson = {next_id++, title, description, difficulty, duration};
+        Lesson lesson = {next_id++, title, description, duration};
         lessons.push_back(lesson);
         return lesson;
     }
@@ -60,7 +59,6 @@ json lessonToJson(const Lesson& lesson) {
         {"id", lesson.id},
         {"title", lesson.title},
         {"description", lesson.description},
-        {"difficulty", lesson.difficulty},
         {"duration", lesson.duration}
     };
 }
@@ -121,7 +119,6 @@ int main() {
             auto lesson = db.addLesson(
                 data["title"],
                 data["description"],
-                data["difficulty"],
                 data["duration"]
             );
             res.status = 201;

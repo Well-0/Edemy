@@ -69,7 +69,34 @@
     "**/.svn": true,
     "**/.hg": true,
     "**/.DS_Store": true,
-    "**/Thumbs.db": true
+    "**/Thumbs.db": true,
+    "frontend/package-lock.json": true,
+    "frontend/package.json": true,
+    "frontend/README.md": true,
+    "frontend/tsconfig.app.json": true,
+    "frontend/tsconfig.json": true,
+    "frontend/tsconfig.node.json": true,
+    "frontend/vite.config.ts": true,
+    ".gitignore": true,
+    ".hintrc": true,
+    "README.md": true,
+    "styles.old": true,
+    "suggestions.md": true,
+    "suggestions2.md": true
   },
-  "hide-files.files": []
+  "hide-files.files": [
+    "frontend/package-lock.json",
+    "frontend/package.json",
+    "frontend/README.md",
+    "frontend/tsconfig.app.json",
+    "frontend/tsconfig.json",
+    "frontend/tsconfig.node.json",
+    "frontend/vite.config.ts",
+    ".gitignore",
+    ".hintrc",
+    "README.md",
+    "styles.old",
+    "suggestions.md",
+    "suggestions2.md"
+  ]
 }

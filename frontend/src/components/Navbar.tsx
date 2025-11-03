@@ -1,8 +1,4 @@
 
-
-//FIXME: Refactor repetitive className logic into a utility function
-//FIXME: Consider extracting Menu components into separate files for better maintainability
-//FIXME: Need to fix rendering Tailwindcss properly as its not recognizing some classes
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
