@@ -22,8 +22,8 @@ export default function Home() {
   const styles = getPageStyles(isDark);
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
+    <div className={styles.container.className} style={styles.container.style}>
+      <div className={styles.card.className} style={styles.card.style}>
         <h1 className={styles.heading}>
           Welcome to Edemy
         </h1>

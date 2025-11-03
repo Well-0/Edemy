@@ -1,25 +1,47 @@
-export const getPageStyles = (isDark: boolean) => ({
-  container: `min-h-screen flex items-center justify-center p-5 overflow-hidden ${
-    isDark ? 'bg-[#1a1a1a]' : 'bg-gradient-to-br from-[#667eea] to-[#764ba2]'
-  }`,
-  
-  card: `rounded-[20px] p-[60px_40px] text-center max-w-[600px] w-full ${
-    isDark 
-      ? 'bg-[#2d2d2d] shadow-[0_20px_60px_rgba(0,0,0,0.6)]' 
-      : 'bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]'
-  }`,
-  
-  heading: `text-[2.5rem] font-bold mb-[15px] ${
-    isDark ? 'text-[#e0e0e0]' : 'text-[#2c3e50]'
-  }`,
-  
-  subtitle: `text-[1.1rem] mb-[40px] ${
-    isDark ? 'text-[#a0a0a0]' : 'text-[#7f8c8d]'
-  }`,
-  
-  buttonGroup: 'flex gap-[15px] justify-center flex-wrap',
-  
-  buttonPrimary: 'px-[35px] py-[15px] text-base font-semibold border-none rounded-[10px] cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.2)] bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:-translate-y-[2px] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)]',
-  
-  buttonSecondary: 'px-[35px] py-[15px] text-base font-semibold border-none rounded-[10px] cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.2)] bg-gradient-to-br from-[#f093fb] to-[#f5576c] text-white hover:-translate-y-[2px] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)]'
-});
+export const getPageStyles = (isDark: boolean) => {
+  // Define styles based on the theme
+  const gradientBg = isDark 
+    ? { background: '#1a1a1a' }
+    : { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' };
+
+  const cardBg = isDark
+    ? { background: '#2d2d2d', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }
+    : { background: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' };
+
+  const headingColor = isDark ? 'text-light' : 'text-dark';
+  const subtitleColor = isDark ? 'text-secondary' : 'text-muted';
+
+  return {
+    container: {
+      className: 'min-vh-100 d-flex align-items-center justify-content-center p-3',
+      style: gradientBg
+    },
+    card: {
+      className: 'text-center rounded-4 p-5',
+      style: { ...cardBg, maxWidth: '600px', width: '100%' }
+    },
+    heading: `display-4 fw-bold mb-3 ${headingColor}`,
+    subtitle: `fs-5 mb-4 ${subtitleColor}`,
+    buttonGroup: 'd-flex gap-3 justify-content-center flex-wrap',
+    buttonPrimary: {
+      className: 'btn btn-lg px-4',
+      style: {
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        border: 'none',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+      }
+    },
+    buttonSecondary: {
+      className: 'btn btn-lg px-4',
+      style: {
+        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        color: 'white',
+        border: 'none',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+      }
+    }
+  };
+};
