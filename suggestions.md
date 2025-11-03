@@ -1,3 +1,9 @@
+Store user shared content with others\
+Anything related to education, inclusive edu cation, early childcare education\
+Like [CorpusAI](https://corpusai.app/)&#x20;
+
+
+
 Store user-imported files in the **app's userData directory** with organized subfolders:
 
 ```TypeScript

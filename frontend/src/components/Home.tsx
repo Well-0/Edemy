@@ -1,22 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { getPageStyles } from '../styles/themeStyles';
 
 export default function Home() {
-  const [isDark, setIsDark] = useState(
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
+  const { isDark } = useTheme();
 
   useEffect(() => {
     console.log('Home page script loaded and DOM ready');
     console.log('Base styles applied to home page');
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDark(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   const styles = getPageStyles(isDark);

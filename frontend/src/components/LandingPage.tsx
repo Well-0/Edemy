@@ -1,27 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+
+import { useTheme } from '../context/ThemeContext';
+
 import { getPageStyles } from '../styles/themeStyles';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [isDark, setIsDark] = useState(
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
-
-  useEffect(() => {
-    console.log('Applying theme');
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      console.log('Theme changed to:', e.matches ? 'dark' : 'light');
-      setIsDark(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    console.log('Theme applied');
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  const { isDark } = useTheme();
 
   const handleGetStarted = () => {
     console.log('Loading Home Page');

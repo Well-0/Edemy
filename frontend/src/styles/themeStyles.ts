@@ -11,6 +11,9 @@ export const getPageStyles = (isDark: boolean) => {
   const headingColor = isDark ? 'text-light' : 'text-dark';
   const subtitleColor = isDark ? 'text-secondary' : 'text-muted';
 
+  // Dark Reader-style filter for buttons
+  const buttonSaturation = 'brightness(0.9) contrast(1.1) saturate(1.0)';
+
   return {
     container: {
       className: 'min-vh-100 d-flex align-items-center justify-content-center p-3',
@@ -29,8 +32,9 @@ export const getPageStyles = (isDark: boolean) => {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         color: 'white',
         border: 'none',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease, filter 0.2s ease',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+        filter: buttonSaturation
       }
     },
     buttonSecondary: {
@@ -39,8 +43,9 @@ export const getPageStyles = (isDark: boolean) => {
         background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         color: 'white',
         border: 'none',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease, filter 0.2s ease',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+        filter: buttonSaturation
       }
     }
   };

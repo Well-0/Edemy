@@ -4,34 +4,14 @@
 //FIXME: Consider extracting Menu components into separate files for better maintainability
 //FIXME: Need to fix rendering Tailwindcss properly as its not recognizing some classes
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
-type Theme = 'system' | 'light' | 'dark';
+
+ 
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const [theme, setTheme] = useState<Theme>('system');
-   
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme;
-    if (stored) setTheme(stored);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    
-    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = theme === 'dark' || (theme === 'system' && isSystemDark);
-    
-     
-    
-    if (shouldBeDark) {
-      document.documentElement.setAttribute('data-bs-theme', 'dark');
-    } else {
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-    }
-  }, [theme]);
+  const { theme, setTheme } = useTheme();
 
   return (
     <nav className="navbar navbar-expand-lg bg-body-tertiary border-bottom">
@@ -67,41 +47,41 @@ export default function Navbar() {
           </li>
 
           {/* View Menu */}
-          <li className="nav-item dropdown">
-            <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-              View
-            </a>
-            <ul className="dropdown-menu">
-              <li><h6 className="dropdown-header">Theme</h6></li>
-              <li>
-                <button 
-                  className="dropdown-item" 
-                  onClick={() => setTheme('system')}
-                >
-                  <i className="bi bi-pc-display me-2"></i>
-                  System {theme === 'system' && '✓'}
-                </button>
-              </li>
-              <li>
-                <button 
-                  className="dropdown-item" 
-                  onClick={() => setTheme('light')}
-                >
-                  <i className="bi bi-sun me-2"></i>
-                  Light {theme === 'light' && '✓'}
-                </button>
-              </li>
-              <li>
-                <button 
-                  className="dropdown-item" 
-                  onClick={() => setTheme('dark')}
-                >
-                  <i className="bi bi-moon me-2"></i>
-                  Dark {theme === 'dark' && '✓'}
-                </button>
-              </li>
-            </ul>
+     <li className="nav-item dropdown">
+        <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          View
+        </a>
+        <ul className="dropdown-menu">
+          <li><h6 className="dropdown-header">Theme</h6></li>
+          <li>
+            <button 
+              className="dropdown-item" 
+              onClick={() => setTheme('system')}
+            >
+              <i className="bi bi-pc-display me-2"></i>
+              System {theme === 'system' && '✓'}
+            </button>
           </li>
+          <li>
+            <button 
+              className="dropdown-item" 
+              onClick={() => setTheme('light')}
+            >
+              <i className="bi bi-sun me-2"></i>
+              Light {theme === 'light' && '✓'}
+            </button>
+          </li>
+          <li>
+            <button 
+              className="dropdown-item" 
+              onClick={() => setTheme('dark')}
+            >
+              <i className="bi bi-moon me-2"></i>
+              Dark {theme === 'dark' && '✓'}
+            </button>
+          </li>
+        </ul>
+      </li>
 
           {/* Help Menu */}
           <li className="nav-item dropdown">
