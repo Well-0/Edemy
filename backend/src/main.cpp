@@ -62,7 +62,8 @@ json lessonToJson(const Lesson& lesson) {
         {"duration", lesson.duration}
     };
 }
-
+//TODO: Implement update and delete lesson handlers
+//TODO: implement reading folder from JSON in Home.tsx
 int main() {
     httplib::Server server;
     LessonDatabase db;
