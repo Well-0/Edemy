@@ -40,9 +40,10 @@ export default function Home() {
   const [scannedFiles, setScannedFiles] = useState<FileData[]>([]);
   const [currentFile, setCurrentFile] = useState<string>('');
 
+  // Handle folder selection and initiate scanning
   const handleFolderSelect = async () => {
     try {
-   
+   // Prompt user to select a directory
       const dirHandle = await window.showDirectoryPicker();
       setIsUploading(true);
       setScannedFiles([]);
@@ -59,43 +60,58 @@ export default function Home() {
     }
   };
 
+  // Recursively scan directory - collect file metadata only (no content reading)
   const scanDirectory = async (dirHandle: FileSystemDirectoryHandle, relativePath: string) => {
-    for await (const entry of dirHandle.values()) {
-      const fullPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-      
-      if (entry.kind === 'directory') {
-        setCurrentFile(`📁 ${fullPath}`);
-        setUploadStatus(`Scanning folder: ${fullPath}`);
-        console.log('[Scan] Directory:', fullPath);
-        await scanDirectory(entry as unknown as FileSystemDirectoryHandle, fullPath);
-      } else if (entry.kind === 'file') {
+    try {
+      // Collect all entries first to avoid iterator invalidation
+      const entries: FileSystemHandle[] = [];
+      for await (const entry of dirHandle.values()) {
+        entries.push(entry);
+      }
+
+      // Separate folders and files
+      const folders = entries.filter(e => e.kind === 'directory');
+      const files = entries.filter(e => e.kind === 'file');
+
+      // First, scan all files in current directory (name only)
+      console.log(`[Scan] Processing ${files.length} files in ${relativePath || 'root'}`);
+      for (const entry of files) {
+        const fullPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
         setCurrentFile(`📄 ${fullPath}`);
-        setUploadStatus(`Reading: ${entry.name}`);
+        setUploadStatus(`Scanning: ${entry.name}`);
         console.log('[Scan] File:', fullPath);
         
-        const file = await (entry as unknown as FileSystemFileHandle).getFile();
+        // Just create file metadata without reading content
         const fileData: FileData = {
           path: fullPath,
           name: entry.name,
-          type: file.type || getFileType(entry.name),
-          size: file.size
+          type: getFileType(entry.name),
+          size: 0 // Will be populated later if needed
         };
-
-        if (shouldReadContent(entry.name)) {
-          try {
-            fileData.content = await file.text();
-            if (fileData.content) {
-              console.log('[Read] Content length:', fileData.content.length);
-            }
-          } catch {
-            console.warn('[Read] Could not read:', entry.name);
-          }
-        }
 
         setScannedFiles(prev => [...prev, fileData]);
       }
+
+      // Then, recursively process each folder one by one
+      console.log(`[Scan] Processing ${folders.length} folders in ${relativePath || 'root'}`);
+      for (const entry of folders) {
+        const fullPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+        setCurrentFile(`📁 ${fullPath}`);
+        setUploadStatus(`Scanning folder: ${fullPath}`);
+        console.log('[Scan] Directory:', fullPath);
+        
+        try {
+          const subDirHandle = await dirHandle.getDirectoryHandle(entry.name);
+          await scanDirectory(subDirHandle as unknown as FileSystemDirectoryHandle, fullPath);
+        } catch (err) {
+          console.warn('[Scan] Could not access directory:', entry.name, err);
+        }
+      }
+    } catch (err) {
+      console.error('[Scan] Error scanning directory:', err);
     }
   };
+
 
   const getFileType = (filename: string): string => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -111,11 +127,6 @@ export default function Home() {
       'json': 'application/json'
     };
     return typeMap[ext || ''] || 'application/octet-stream';
-  };
-
-  const shouldReadContent = (filename: string): boolean => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    return ['html', 'htm', 'txt', 'md', 'json', 'js', 'ts', 'css'].includes(ext || '');
   };
 
   const downloadJSON = () => {
