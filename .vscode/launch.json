@@ -48,6 +48,27 @@
       "console": "integratedTerminal",
       "preLaunchTask": "TypeScript Build"
     },
+    
+    {
+      "name": "Run test_parser",
+      "type":  "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}\\build\\test_parser.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "CMake: Build test_parser",
+      "console": "integratedTerminal"
+    },
+  {
+    "name": "Run edemy_backend",
+    "type": "cppvsdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}\\build\\edemy_backend.exe",  // Remove Release/
+    "args": [],
+    "cwd": "${workspaceFolder}",
+    "preLaunchTask": "CMake: Build edemy_backend",
+    "console": "integratedTerminal"
+  },
     {
       "name": "NPM Auto-Rebuild",
       "type": "node",

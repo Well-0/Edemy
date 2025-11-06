@@ -19,5 +19,28 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(httplib json)
 
-add_executable(edemy_backend src/main.cpp)
-target_link_libraries(edemy_backend PRIVATE httplib::httplib nlohmann_json::nlohmann_json)
+# Main backend server
+add_executable(edemy_backend 
+  src/main.cpp 
+  src/LessonDatabase.cpp 
+  src/FileProcessor.cpp
+)
+target_link_libraries(edemy_backend 
+  PRIVATE 
+  httplib::httplib 
+  nlohmann_json::nlohmann_json
+  ws2_32
+)
+target_compile_options(edemy_backend PRIVATE /MT)
+
+# Test parser tool
+add_executable(test_parser 
+  tests/test_parser.cpp 
+  src/FileProcessor.cpp
+)
+target_link_libraries(test_parser 
+  PRIVATE 
+  nlohmann_json::nlohmann_json
+)
+target_include_directories(test_parser PRIVATE src)
+target_compile_options(test_parser PRIVATE /MT)

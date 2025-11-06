@@ -140,6 +140,20 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const processFiles = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/process-files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scannedFiles)
+    });
+    const result = await response.json();
+    console.log('[Process] Files saved to:', result.location);
+  } catch (err) {
+    console.error('[Process] Error:', err);
+  }
+};
+
   return (
     <div className={`home-container ${isDark ? 'dark' : 'light'}`}>
       <div className="home-card">
@@ -183,6 +197,7 @@ export default function Home() {
               <h4>Scanned Files ({scannedFiles.length})</h4>
               <div className="d-flex gap-2">
                 <button className="btn btn-primary" onClick={downloadJSON}>💾 Download JSON</button>
+                <button className="btn btn-success" onClick={processFiles} disabled={scannedFiles.length === 0}>➡️ Process</button>
                 <button className="btn btn-secondary" onClick={() => setScannedFiles([])}>🔄 Reset</button>
               </div>
             </div>
