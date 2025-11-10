@@ -40,20 +40,21 @@ int main() {
         std::cout << "Step 4: Setting up CORS..." << std::endl;
         std::cout.flush();
 
-    // Enable CORS for React development
-    server.set_default_headers({
-        {"Access-Control-Allow-Origin", "*"},
-        {"Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"},
-        {"Access-Control-Allow-Headers", "Content-Type"}
-    });
-
-    // Handle OPTIONS requests for CORS preflight
+            // Handle OPTIONS requests once for CORS preflight
     server.Options(".*", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
-        res.status = 204;
-    });
+            res.status = 204;
+        });
+
+         // CORS middleware - add CORS headers to ALL responses (after routing)
+        server.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
+            res.set_header("Access-Control-Allow-Origin", "*");
+            res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        });
+        std::cout << "Step 5: Defining endpoints..." << std::endl;
+        std::cout.flush();
+
+
 
     // Health check
     server.Get("/api/health", [](const httplib::Request&, httplib::Response& res) {
@@ -103,8 +104,10 @@ int main() {
         }
     });
 
+    // Process file list
     server.Post("/api/process-files", [](const httplib::Request& req, httplib::Response& res) {
     try {
+        // Validate and parse the request body
         auto fileList = json::parse(req.body);
         FileProcessor::processFileList(fileList);
         

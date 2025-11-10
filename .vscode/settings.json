@@ -1,4 +1,7 @@
 {
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\msys64\\mingw64\\bin;${env:PATH}"
+    },
     "rest.api": {
         "autoStart": true,
         "openInBrowser": true,
@@ -11,5 +14,6 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true
     },
-    "hide-files.files": []
+    "hide-files.files": [],
+    "cmake.sourceDirectory": "C:/Users/daria/Documents/DAIN/backend"
 }

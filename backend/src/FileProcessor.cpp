@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -49,15 +50,33 @@ void FileProcessor::processFileList(const json& fileList) {
         std::cerr << "[FileProcessor] Expected JSON array\n";
         return;
     }
-    
+     std::string baseDir = getAppDataPath();
+    if (!createDirectory(baseDir)) {
+        std::cerr << "[FileProcessor] Failed to create base directory\n";
+        return;
+    }
     for (const auto& file : fileList) {
         std::string path = file.value("path", "");
-        std::string name = file.value("name", "");
-        std::string type = file.value("type", "");
-        std::size_t size = file.value("size", 0ULL);
-
-        std::cout << "[FileProcessor] Processing: " << path
-                  << " (name: " << name << ", type: " << type
-                  << ", size: " << size << ")\n";
+        if (path.empty()) continue;
+        
+        // Extract directory from path and create it
+        fs::path fullPath = fs::path(baseDir) / path;
+        fs::path parentDir = fullPath.parent_path();
+        
+        if (!parentDir.empty()) {
+            createDirectory(parentDir.string());
+        }
+        
+        // If file has content, write it
+        if (file.contains("content")) {
+            std::ofstream out(fullPath, std::ios::binary);
+            std::string content = file.value("content", "");
+            out.write(content.data(), content.size());
+            std::cout << "[FileProcessor] Created: " << path << "\n";
+        } else {
+            // Create empty placeholder file
+            std::ofstream out(fullPath);
+            std::cout << "[FileProcessor] Created placeholder: " << path << "\n";
+        }
     }
 }

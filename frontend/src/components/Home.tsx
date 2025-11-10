@@ -139,7 +139,7 @@ export default function Home() {
     a.click();
     URL.revokeObjectURL(url);
   };
-
+  
   const processFiles = async () => {
   try {
     const response = await fetch('http://localhost:8080/api/process-files', {
@@ -197,7 +197,7 @@ export default function Home() {
               <h4>Scanned Files ({scannedFiles.length})</h4>
               <div className="d-flex gap-2">
                 <button className="btn btn-primary" onClick={downloadJSON}>💾 Download JSON</button>
-                <button className="btn btn-success" onClick={processFiles} disabled={scannedFiles.length === 0}>➡️ Process</button>
+                  <button className="btn btn-success" onClick={processFiles} disabled={scannedFiles.length === 0}>➡️ Process</button>
                 <button className="btn btn-secondary" onClick={() => setScannedFiles([])}>🔄 Reset</button>
               </div>
             </div>

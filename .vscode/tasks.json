@@ -76,19 +76,32 @@
             },
             "problemMatcher": "$gcc"
         },
-        {
+ {
+    "label": "CMake: Configure with Ninja",
+    "type": "shell",
+    "command": "cmake",
+    "args": [
+        "-S", "backend",
+        "-B", "build",
+        "-G", "Ninja"
+    ],
+    "group": "build",
+    "problemMatcher": []
+},
+{
     "label": "CMake: Build edemy_backend",
     "type": "shell",
     "command": "cmake",
     "args": [
         "--build",
-        "${workspaceFolder}\\build",
+        "${workspaceFolder}/build",
         "--target",
         "edemy_backend"
     ],
+    "dependsOn": ["CMake: Configure with Ninja"],
     "group": {
         "kind": "build",
-        "isDefault": false
+        "isDefault": true
     },
     "problemMatcher": "$gcc"
 },

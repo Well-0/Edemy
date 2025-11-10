@@ -31,7 +31,6 @@ target_link_libraries(edemy_backend
   nlohmann_json::nlohmann_json
   ws2_32
 )
-target_compile_options(edemy_backend PRIVATE /MT)
 
 # Test parser tool
 add_executable(test_parser 
@@ -43,4 +42,3 @@ target_link_libraries(test_parser
   nlohmann_json::nlohmann_json
 )
 target_include_directories(test_parser PRIVATE src)
-target_compile_options(test_parser PRIVATE /MT)
