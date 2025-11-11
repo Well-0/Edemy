@@ -39,6 +39,9 @@ export default function Home() {
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [scannedFiles, setScannedFiles] = useState<FileData[]>([]);
   const [currentFile, setCurrentFile] = useState<string>('');
+  const [selectedDrive, setSelectedDrive] = useState<string>('');
+
+
 
   // Handle folder selection and initiate scanning
   const handleFolderSelect = async () => {
@@ -47,12 +50,16 @@ export default function Home() {
       const dirHandle = await window.showDirectoryPicker();
       setIsUploading(true);
       setScannedFiles([]);
-      
-      await scanDirectory(dirHandle, '');
-      
+
+
+        const files: FileData[] = [];
+      await scanDirectory(dirHandle, '', files);
+
+      setScannedFiles(files);
+
       setIsUploading(false);
       setUploadStatus('Upload complete!');
-      console.log('[Upload] Complete. Total files:', scannedFiles.length);
+      console.log('[Upload] Complete. Total files:', files.length);
     } catch (err) {
       console.error('[Upload] Error:', err);
       setIsUploading(false);
@@ -60,39 +67,38 @@ export default function Home() {
     }
   };
 
-  // Recursively scan directory - collect file metadata only (no content reading)
-  const scanDirectory = async (dirHandle: FileSystemDirectoryHandle, relativePath: string) => {
-    try {
-      // Collect all entries first to avoid iterator invalidation
-      const entries: FileSystemHandle[] = [];
-      for await (const entry of dirHandle.values()) {
-        entries.push(entry);
-      }
+  // Recursively scan directory - now builds array and returns it
+ const scanDirectory = async (
+      dirHandle: FileSystemDirectoryHandle,
+      relativePath: string,
+      files: FileData[]
+      ): Promise<void> => {
+        try {
+          const entries: FileSystemHandle[] = [];
+          for await (const entry of dirHandle.values()) {
+            entries.push(entry);
+          }
 
       // Separate folders and files
       const folders = entries.filter(e => e.kind === 'directory');
-      const files = entries.filter(e => e.kind === 'file');
+      const fileEntries = entries.filter(e => e.kind === 'file');
 
-      // First, scan all files in current directory (name only)
-      console.log(`[Scan] Processing ${files.length} files in ${relativePath || 'root'}`);
-      for (const entry of files) {
+          // process files
+      console.log(`[Scan] Processing ${fileEntries.length} files in ${relativePath || 'root'}`);
+      for (const entry of fileEntries) {
         const fullPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
         setCurrentFile(`📄 ${fullPath}`);
         setUploadStatus(`Scanning: ${entry.name}`);
         console.log('[Scan] File:', fullPath);
         
-        // Just create file metadata without reading content
-        const fileData: FileData = {
+        files.push({
           path: fullPath,
           name: entry.name,
           type: getFileType(entry.name),
-          size: 0 // Will be populated later if needed
-        };
-
-        setScannedFiles(prev => [...prev, fileData]);
+          size: 0
+        });
       }
-
-      // Then, recursively process each folder one by one
+      // process folders
       console.log(`[Scan] Processing ${folders.length} folders in ${relativePath || 'root'}`);
       for (const entry of folders) {
         const fullPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
@@ -102,7 +108,11 @@ export default function Home() {
         
         try {
           const subDirHandle = await dirHandle.getDirectoryHandle(entry.name);
-          await scanDirectory(subDirHandle as unknown as FileSystemDirectoryHandle, fullPath);
+          await scanDirectory(
+            subDirHandle as unknown as FileSystemDirectoryHandle,
+            fullPath,
+            files
+          );
         } catch (err) {
           console.warn('[Scan] Could not access directory:', entry.name, err);
         }
@@ -130,7 +140,7 @@ export default function Home() {
   };
 
   const downloadJSON = () => {
-    const json = JSON.stringify(scannedFiles, null, 2);
+    const json = JSON.stringify(scannedFiles, null, 2); // Pretty print with 2 spaces
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -140,7 +150,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
   
-  const processFiles = async () => {
+  const copyFolder = async () => {
   try {
     const response = await fetch('http://localhost:8080/api/process-files', {
       method: 'POST',
@@ -162,6 +172,22 @@ export default function Home() {
 
         {!isUploading && scannedFiles.length === 0 && (
           <div className="upload-section">
+            <div className="mb-3">
+              <label htmlFor="driveSelect" className="form-label">Select Drive:</label>
+              <select 
+                id="driveSelect"
+                className="form-select" 
+                value={selectedDrive}
+                onChange={(e) => setSelectedDrive(e.target.value)}
+              >
+                <option value="">-- Choose a drive --</option>
+                <option value="C">C: Drive</option>
+                <option value="D">D: Drive</option>
+                <option value="E">E: Drive</option>
+                <option value="F">F: Drive</option>
+              </select>
+            </div>
+
             <div className="upload-area" onClick={handleFolderSelect}>
               <div className="upload-icon">📁</div>
               <div className="upload-text">Click to select folder</div>
@@ -197,7 +223,7 @@ export default function Home() {
               <h4>Scanned Files ({scannedFiles.length})</h4>
               <div className="d-flex gap-2">
                 <button className="btn btn-primary" onClick={downloadJSON}>💾 Download JSON</button>
-                  <button className="btn btn-success" onClick={processFiles} disabled={scannedFiles.length === 0}>➡️ Process</button>
+                  <button className="btn btn-success" onClick={copyFolder} disabled={scannedFiles.length === 0}>➡️ Process</button>
                 <button className="btn btn-secondary" onClick={() => setScannedFiles([])}>🔄 Reset</button>
               </div>
             </div>
