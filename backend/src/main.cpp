@@ -8,8 +8,11 @@
 #include "LessonDatabase.h"
 #include "Lesson.h"
 #include "FileProcessor.h"
+#include "resources/ParallelCopy.hpp"
+#include "resources/ThreadPool.hpp"
 
 using json = nlohmann::json;
+
  
 
 json lessonToJson(const Lesson& lesson) {
@@ -20,8 +23,9 @@ json lessonToJson(const Lesson& lesson) {
         {"duration", lesson.duration}
     };
 }
-//TODO: Implement update and delete lesson handlers
-//TODO: implement reading folder from JSON in Home.tsx
+
+// Global context so we can poll progress from request handlers
+static std::unique_ptr<CopyCtx> gCopyCtx;
 
 int main() {
     std::cout << "=== Edemy Backend Starting ===" << std::endl;
@@ -124,21 +128,86 @@ int main() {
     }
 });
 */
-    //Copy folder dir (from frontend)
-    server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Response& res) {
+
+//Copy folder dir 
+server.Post("/api/copy-folder", [&](const httplib::Request& req, httplib::Response& res){
     try {
-      res.status = 200;
-      json response = {
-          {"status", "success"},
-          {"message", "Folder path received"}
-      };    
-        res.set_content(response.dump(), "application/json");
-    } catch (const std::exception& e) {
-        json error = {{"error", e.what()}};
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
-    
+        auto body = json::parse(req.body);
+        // extract parameters
+        std::string drive       = body.value("drive", "F"); // default to F
+        std::string folderName  = body.value("folderName", "");
+        if (folderName.empty()) {
+            res.status = 400;
+            res.set_content(R"({"error":"folderName missing"})", "application/json");
+            return;
+        }
+
+        // 1. build source: F:/torrent/[GigaCourse.Com] …
+        fs::path srcRoot = fs::path(drive + ":/torrent") / folderName;
+        if (!fs::exists(srcRoot) || !fs::is_directory(srcRoot)) {
+            res.status = 404;
+            res.set_content(R"({"error":"source folder not found"})", "application/json");
+            return;
+        }
+
+        // 2. build destination: %APPDATA%/Edemy/folderName
+        // Use sanitized folder name to avoid special character issues
+        std::string sanitizedName = folderName;
+        // Remove problematic characters for Windows paths
+        for (char& c : sanitizedName) {
+            if (c == '[' || c == ']' || c == '<' || c == '>' || c == ':' || 
+                c == '"' || c == '|' || c == '?' || c == '*') {
+                c = '_';
+            }
+        }
+        
+        fs::path baseEdemy = FileProcessor::getAppDataPath();
+        fs::path dstRoot = baseEdemy / sanitizedName;
+        
+        // Create directory structure manually to handle edge cases
+        try {
+            fs::create_directories(dstRoot);
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "[Copy] Failed to create destination: " << e.what() << std::endl;
+            res.status = 500;
+            res.set_content(json{{"error", "Failed to create destination directory"}}.dump(), "application/json");
+            return;
+        }
+
+        // 3. kick off parallel copy in background
+        gCopyCtx = std::make_unique<CopyCtx>(8);  // 8 threads
+        std::thread worker([srcRoot, dstRoot]{
+            copyDirParallel(srcRoot, dstRoot, *gCopyCtx);
+            // when finished, destroy context
+            gCopyCtx.reset();
+        });
+        worker.detach();
+
+        json reply;
+        reply["status"]    = "started";
+        reply["location"]  = dstRoot.string();
+        res.set_content(reply.dump(), "application/json");
+
+    } catch (const std::exception& ex) {
+        res.status = 500;
+        res.set_content(json{{"error", ex.what()}}.dump(), "application/json");
     }
+});
+
+// ...existing code...
+
+    server.Get("/api/copy-progress", [&](const httplib::Request& req, httplib::Response& res){
+    json j;
+    if (!gCopyCtx) {
+        j["percent"] = 100;
+    } else {
+        uint64_t total = gCopyCtx->bytesTotal.load();
+        uint64_t done  = gCopyCtx->bytesDone.load();
+        j["percent"]   = total ? static_cast<int>(done * 100 / total) : 0;
+        j["bytesDone"] = done;
+        j["bytesTotal"]= total;
+    }
+    res.set_content(j.dump(), "application/json");
 });
 
  std::cout << "🚀 Edemy Backend Server starting on http://localhost:8080" << std::endl;
