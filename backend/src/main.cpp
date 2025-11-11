@@ -105,7 +105,7 @@ int main() {
     });
 
     // Process file list
-    server.Post("/api/process-files", [](const httplib::Request& req, httplib::Response& res) {
+ /*   server.Post("/api/process-files", [](const httplib::Request& req, httplib::Response& res) {
     try {
         // Validate and parse the request body
         auto fileList = json::parse(req.body);
@@ -121,6 +121,23 @@ int main() {
         json error = {{"error", e.what()}};
         res.status = 400;
         res.set_content(error.dump(), "application/json");
+    }
+});
+*/
+    //Copy folder dir (from frontend)
+    server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Response& res) {
+    try {
+      res.status = 200;
+      json response = {
+          {"status", "success"},
+          {"message", "Folder path received"}
+      };    
+        res.set_content(response.dump(), "application/json");
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.status = 400;
+        res.set_content(error.dump(), "application/json");
+    
     }
 });
 

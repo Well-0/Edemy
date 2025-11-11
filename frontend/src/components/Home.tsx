@@ -11,9 +11,11 @@ declare global {
 }
 
 interface FileSystemDirectoryHandle {
+  name : string;
   values(): AsyncIterable<FileSystemHandle>;
   getFileHandle(name: string): Promise<FileSystemFileHandle>;
   getDirectoryHandle(name: string): Promise<FileSystemDirectoryHandle>;
+  getDriveHandle(): Promise<FileSystemDirectoryHandle>;
 }
 
 interface FileSystemFileHandle {
@@ -40,14 +42,25 @@ export default function Home() {
   const [scannedFiles, setScannedFiles] = useState<FileData[]>([]);
   const [currentFile, setCurrentFile] = useState<string>('');
   const [selectedDrive, setSelectedDrive] = useState<string>('');
+    const [folderName, setFolderName] = useState<string>(''); 
 
 
 
   // Handle folder selection and initiate scanning
   const handleFolderSelect = async () => {
+        if (!selectedDrive) {
+      setUploadStatus('Please select a drive first');
+      return;
+    }
     try {
    // Prompt user to select a directory
       const dirHandle = await window.showDirectoryPicker();
+
+          const folderName = dirHandle.name;
+          //  dirHandle.getDriveHandle ? await dirHandle.getDriveHandle() : dirHandle;
+      //get folder name to string
+      setFolderName(folderName);
+      console.log('[Upload] Selected folder:', folderName);
       setIsUploading(true);
       setScannedFiles([]);
 
@@ -152,10 +165,15 @@ export default function Home() {
   
   const copyFolder = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/process-files', {
+    const response = await fetch('http://localhost:8080/api/copy-folder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(scannedFiles)
+      body: JSON.stringify({ 
+        drive: selectedDrive,
+        files: scannedFiles,
+        folderName: folderName
+        
+      })
     });
     const result = await response.json();
     console.log('[Process] Files saved to:', result.location);
