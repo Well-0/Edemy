@@ -51,32 +51,37 @@ inline void copyDirParallel(const fs::path& src,
 {
     if (ctx.cancel) return;
     
-    // Create directories with error handling
     std::error_code ec;
     fs::create_directories(dst, ec);
     if (ec) {
-        // Log error but continue - directory might already exist
         std::cerr << "[ParallelCopy] Failed to create: " << dst << " - " << ec.message() << std::endl;
         return;
     }
     
-    for (const auto& entry : fs::directory_iterator(src)) {
+    std::error_code iter_ec;
+    for (const auto& entry : fs::directory_iterator(src, iter_ec)) {
+        if (iter_ec) break;
+        
         const auto& path = entry.path();
-        auto rel = fs::relative(path, src);
-        auto destPath = dst / rel;
-        if (entry.is_directory()) {
+        auto destPath = dst / path.filename(); // Use filename instead of relative
+        
+        std::error_code status_ec;
+        if (fs::is_directory(path, status_ec) && !status_ec) {
             copyDirParallel(path, destPath, ctx);
-        } else {
-            // tiny file → immediate copy in caller thread
-            if (entry.file_size() < 4 * CHUNK) {
-                std::error_code copyEc;
-                fs::copy_file(path, destPath, fs::copy_options::overwrite_existing, copyEc);
-                if (!copyEc) {
-                    ctx.bytesTotal += entry.file_size();
-                    ctx.bytesDone  += entry.file_size();
+        } else if (fs::is_regular_file(path, status_ec) && !status_ec) {
+            std::error_code size_ec;
+            auto size = fs::file_size(path, size_ec);
+            if (size_ec) continue; // Skip if can't get size
+            
+            if (size < 4 * CHUNK) {
+                std::error_code copy_ec;
+                fs::create_directories(destPath.parent_path(), copy_ec);
+                fs::copy_file(path, destPath, fs::copy_options::overwrite_existing, copy_ec);
+                if (!copy_ec) {
+                    ctx.bytesTotal += size;
+                    ctx.bytesDone  += size;
                 }
             } else {
-                // big file → enqueue
                 ctx.pool.enqueue([&ctx, path, destPath] {
                     copyFileChunked(path, destPath, ctx);
                 });

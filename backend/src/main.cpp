@@ -1,10 +1,16 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
+#include <algorithm>
+#include <cctype>
+#include <iomanip>
 #include <iostream>
-#include <vector>
-#include <string>
 #include <mutex>
 #include <optional>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+#include <filesystem>
 #include "LessonDatabase.h"
 #include "Lesson.h"
 #include "FileProcessor.h"
@@ -12,8 +18,132 @@
 #include "resources/ThreadPool.hpp"
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
- 
+namespace {
+
+constexpr std::size_t kWindowsSafePathLimit = 248; // keep some headroom below MAX_PATH
+constexpr std::size_t kMinSanitizedLength   = 16;
+constexpr std::size_t kMaxSanitizedLength   = 64;
+
+std::size_t computeLongestRelativeLength(const fs::path& root) {
+    std::size_t longest = 0;
+    std::error_code ec;
+    if (!fs::exists(root, ec) || !fs::is_directory(root, ec)) {
+        return longest;
+    }
+
+    fs::recursive_directory_iterator it(
+        root,
+        fs::directory_options::skip_permission_denied,
+        ec
+    );
+    fs::recursive_directory_iterator end;
+
+    while (!ec && it != end) {
+        std::error_code relEc;
+        auto rel = fs::relative(it->path(), root, relEc);
+        if (!relEc) {
+            auto relStr = rel.generic_u8string();
+            if (relStr.size() > longest) {
+                longest = relStr.size();
+            }
+        }
+        it.increment(ec);
+    }
+
+    return longest;
+}
+
+std::string makeHashSuffix(std::size_t value, std::size_t maxLen) {
+    std::ostringstream oss;
+    oss << std::hex << std::nouppercase << value;
+    std::string hex = oss.str();
+    if (hex.empty()) {
+        hex = "0";
+    }
+    if (maxLen && hex.size() > maxLen) {
+        hex.resize(maxLen);
+    }
+    return hex;
+}
+
+std::string sanitizeFolderName(const std::string& raw, std::size_t maxLen) {
+    static constexpr char kInvalidChars[] = "[]<>:\"|?*";
+    std::string sanitized;
+    sanitized.reserve(raw.size());
+
+    for (char ch : raw) {
+        if (std::iscntrl(static_cast<unsigned char>(ch)) ||
+            std::find(std::begin(kInvalidChars), std::end(kInvalidChars), ch) != std::end(kInvalidChars)) {
+            sanitized.push_back('_');
+        } else {
+            sanitized.push_back(ch);
+        }
+    }
+
+    // Trim trailing spaces or dots (Windows does not allow them)
+    while (!sanitized.empty() && (sanitized.back() == ' ' || sanitized.back() == '.')) {
+        sanitized.pop_back();
+    }
+
+    if (sanitized.empty()) {
+        sanitized = "EdemyCopy";
+    }
+
+    if (maxLen == 0 || sanitized.size() <= maxLen) {
+        return sanitized;
+    }
+
+    const std::size_t suffixBudget = maxLen > kMinSanitizedLength ? 8 : 6;
+    std::string hash = makeHashSuffix(std::hash<std::string>{}(sanitized), suffixBudget);
+
+    std::size_t keep = (maxLen > hash.size() + 1) ? (maxLen - hash.size() - 1) : 0;
+    std::string trimmed = keep ? sanitized.substr(0, keep) : std::string();
+
+    while (!trimmed.empty() && (trimmed.back() == ' ' || trimmed.back() == '.')) {
+        trimmed.pop_back();
+    }
+
+    if (trimmed.empty()) {
+        trimmed = "Edemy";
+    }
+
+    trimmed.push_back('_');
+    trimmed.append(hash);
+
+    if (trimmed.size() > maxLen) {
+        trimmed.resize(maxLen);
+    }
+
+    return trimmed;
+}
+
+std::size_t determineSanitizedLimit(const fs::path& base, const fs::path& sourceRoot) {
+    const std::size_t baseLen = base.string().size();
+    const std::size_t longestRel = computeLongestRelativeLength(sourceRoot);
+
+    if (baseLen + 1 >= kWindowsSafePathLimit) {
+        return kMinSanitizedLength;
+    }
+
+    std::size_t available = 0;
+    if (kWindowsSafePathLimit > baseLen + 1 + longestRel) {
+        available = kWindowsSafePathLimit - (baseLen + 1 + longestRel);
+    }
+
+    if (available < kMinSanitizedLength) {
+        return 0;
+    }
+
+    if (available > kMaxSanitizedLength) {
+        return kMaxSanitizedLength;
+    }
+
+    return available;
+}
+
+} // namespace
 
 json lessonToJson(const Lesson& lesson) {
     return {
@@ -26,6 +156,7 @@ json lessonToJson(const Lesson& lesson) {
 
 // Global context so we can poll progress from request handlers
 static std::unique_ptr<CopyCtx> gCopyCtx;
+static std::mutex gCopyCtxMutex;
 
 int main() {
     std::cout << "=== Edemy Backend Starting ===" << std::endl;
@@ -130,84 +261,133 @@ int main() {
 */
 
 //Copy folder dir 
-server.Post("/api/copy-folder", [&](const httplib::Request& req, httplib::Response& res){
+server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Response& res) {
     try {
-        auto body = json::parse(req.body);
-        // extract parameters
-        std::string drive       = body.value("drive", "F"); // default to F
-        std::string folderName  = body.value("folderName", "");
-        if (folderName.empty()) {
+        auto data = json::parse(req.body);
+
+        if (!data.contains("drive") || !data.contains("folderName")) {
+            json error = {{"error", "drive and folderName are required"}};
             res.status = 400;
-            res.set_content(R"({"error":"folderName missing"})", "application/json");
+            res.set_content(error.dump(), "application/json");
             return;
         }
 
-        // 1. build source: F:/torrent/[GigaCourse.Com] …
-        fs::path srcRoot = fs::path(drive + ":/torrent") / folderName;
-        if (!fs::exists(srcRoot) || !fs::is_directory(srcRoot)) {
+        std::string drive = data["drive"].get<std::string>();
+        std::string folderName = data["folderName"].get<std::string>();
+
+        if (drive.empty()) {
+            json error = {{"error", "Drive letter cannot be empty"}};
+            res.status = 400;
+            res.set_content(error.dump(), "application/json");
+            return;
+        }
+
+        if (drive.size() > 1) {
+            drive = drive.substr(0, 1);
+        }
+
+        fs::path srcPath = fs::path(drive + ":/torrent") / folderName;
+        if (!fs::exists(srcPath)) {
+            json error = {{"error", "Source not found"}, {"path", srcPath.string()}};
             res.status = 404;
-            res.set_content(R"({"error":"source folder not found"})", "application/json");
+            res.set_content(error.dump(), "application/json");
             return;
         }
 
-        // 2. build destination: %APPDATA%/Edemy/folderName
-        // Use sanitized folder name to avoid special character issues
-        std::string sanitizedName = folderName;
-        // Remove problematic characters for Windows paths
-        for (char& c : sanitizedName) {
-            if (c == '[' || c == ']' || c == '<' || c == '>' || c == ':' || 
-                c == '"' || c == '|' || c == '?' || c == '*') {
-                c = '_';
-            }
-        }
-        
-        fs::path baseEdemy = FileProcessor::getAppDataPath();
-        fs::path dstRoot = baseEdemy / sanitizedName;
-        
-        // Create directory structure manually to handle edge cases
-        try {
-            fs::create_directories(dstRoot);
-        } catch (const fs::filesystem_error& e) {
-            std::cerr << "[Copy] Failed to create destination: " << e.what() << std::endl;
+        fs::path baseDest = FileProcessor::getAppDataPath();
+        if (!FileProcessor::createDirectory(baseDest.string())) {
+            json error = {{"error", "Unable to ensure base destination directory"}, {"path", baseDest.string()}};
             res.status = 500;
-            res.set_content(json{{"error", "Failed to create destination directory"}}.dump(), "application/json");
+            res.set_content(error.dump(), "application/json");
             return;
         }
 
-        // 3. kick off parallel copy in background
-        gCopyCtx = std::make_unique<CopyCtx>(8);  // 8 threads
-        std::thread worker([srcRoot, dstRoot]{
-            copyDirParallel(srcRoot, dstRoot, *gCopyCtx);
-            // when finished, destroy context
+        std::size_t sanitizedLimit = determineSanitizedLimit(baseDest, srcPath);
+        if (sanitizedLimit == 0) {
+            json error = {{"error", "Destination path would exceed Windows limits"}};
+            res.status = 400;
+            res.set_content(error.dump(), "application/json");
+            return;
+        }
+
+        std::string sanitizedRoot = sanitizeFolderName(folderName, sanitizedLimit);
+        fs::path dstPath = baseDest / sanitizedRoot;
+
+        std::error_code createEc;
+        fs::create_directories(dstPath, createEc);
+        if (createEc) {
+            json error = {{"error", "Failed to prepare destination"}, {"details", createEc.message()}, {"path", dstPath.string()}};
+            res.status = 500;
+            res.set_content(error.dump(), "application/json");
+            return;
+        }
+
+        CopyCtx* ctxPtr = nullptr;
+        {
+            std::lock_guard<std::mutex> guard(gCopyCtxMutex);
+            if (gCopyCtx) {
+                json error = {{"error", "Another copy operation is already running"}};
+                res.status = 409;
+                res.set_content(error.dump(), "application/json");
+                return;
+            }
+
+            const unsigned int hardwareThreads = std::max(2u, std::thread::hardware_concurrency());
+            gCopyCtx = std::make_unique<CopyCtx>(hardwareThreads);
+            ctxPtr = gCopyCtx.get();
+        }
+
+        ctxPtr->bytesTotal.store(0);
+        ctxPtr->bytesDone.store(0);
+        ctxPtr->cancel.store(false);
+
+        std::thread([srcPath, dstPath, ctxPtr]() {
+            try {
+                copyDirParallel(srcPath, dstPath, *ctxPtr);
+                std::cout << "[Copy] Done: " << ctxPtr->bytesDone.load() << " bytes\n";
+            } catch (const std::exception& ex) {
+                std::cerr << "[Copy] Error: " << ex.what() << std::endl;
+            }
+
+            std::lock_guard<std::mutex> guard(gCopyCtxMutex);
             gCopyCtx.reset();
-        });
-        worker.detach();
+        }).detach();
 
-        json reply;
-        reply["status"]    = "started";
-        reply["location"]  = dstRoot.string();
-        res.set_content(reply.dump(), "application/json");
+        json response = {
+            {"status", "started"},
+            {"source", srcPath.string()},
+            {"destination", dstPath.string()},
+            {"sanitizedFolder", sanitizedRoot},
+            {"sanitizedLimit", sanitizedLimit}
+        };
+        res.set_content(response.dump(), "application/json");
 
-    } catch (const std::exception& ex) {
-        res.status = 500;
-        res.set_content(json{{"error", ex.what()}}.dump(), "application/json");
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.status = 400;
+        res.set_content(error.dump(), "application/json");
     }
 });
 
-// ...existing code...
+server.Get("/api/copy-progress", [](const httplib::Request&, httplib::Response& res) {
+    json payload;
 
-    server.Get("/api/copy-progress", [&](const httplib::Request& req, httplib::Response& res){
-    json j;
+    std::lock_guard<std::mutex> guard(gCopyCtxMutex);
     if (!gCopyCtx) {
-        j["percent"] = 100;
+        payload["active"] = false;
+        payload["bytesTotal"] = 0;
+        payload["bytesDone"] = 0;
+        payload["percent"] = 100;
     } else {
-        uint64_t total = gCopyCtx->bytesTotal.load();
-        uint64_t done  = gCopyCtx->bytesDone.load();
-        j["percent"]   = total ? static_cast<int>(done * 100 / total) : 0;
-        j["bytesDone"] = done;
-        j["bytesTotal"]= total;
+        const uint64_t total = gCopyCtx->bytesTotal.load();
+        const uint64_t done  = gCopyCtx->bytesDone.load();
+        payload["active"] = true;
+        payload["bytesTotal"] = total;
+        payload["bytesDone"] = done;
+        payload["percent"] = total ? static_cast<int>((done * 100) / total) : 0;
     }
-    res.set_content(j.dump(), "application/json");
+
+    res.set_content(payload.dump(), "application/json");
 });
 
  std::cout << "🚀 Edemy Backend Server starting on http://localhost:8080" << std::endl;
@@ -217,6 +397,8 @@ std::cout << "   GET  /api/lessons" << std::endl;
 std::cout << "   GET  /api/lessons/:id" << std::endl;
 std::cout << "   POST /api/lessons" << std::endl;
 std::cout << "   POST /api/process-files" << std::endl;
+std::cout << "   POST /api/copy-folder" << std::endl;
+std::cout << "   GET  /api/copy-progress" << std::endl;
 std::cout << "\n✅ Server is ready and listening..." << std::endl;
 std::cout.flush();  // Force output before blocking
 
