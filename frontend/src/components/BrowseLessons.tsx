@@ -6,7 +6,8 @@ interface Course {
   path: string;
   fileCount?: number;
 }
-
+//TODO: Make Virtual Save State by Saving Json and Loading it, Tracking back to last opened lesson
+//TODO: Should Read AppData Edemy and Load Courses from there
 export default function BrowseLessons() {
   const { isDark } = useTheme();
   const [courses, setCourses] = useState<Course[]>([]);
