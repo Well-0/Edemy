@@ -1,6 +1,6 @@
 # Edemy
 
-Edemy is a two-tier learning platform example with a C++ REST backend and a React + Vite frontend.
+Edemy is a two-tier learning platform example with a C++ REST backend and a React + Vite frontend with BootStrap CSS.
 
 ## Project Structure
 
@@ -34,8 +34,6 @@ Frontend: Install Node.js (>=18). From frontend/, install npm packages:
 npm install
 ```
 
-The Tailwind CSS toolchain uses the PostCSS plugin from `@tailwindcss/postcss`. Keep the Tailwind config in `frontend/tailwind.config.cjs` and the PostCSS pipeline in `frontend/postcss.config.cjs` so Node treats them as CommonJS modules while the project `package.json` uses ES modules.
-
 ## Running the App
 
 Start the backend server
@@ -57,3 +55,68 @@ npm run dev
 Vite serves the React app at the URL printed in the terminal (defaults to <http://localhost:5173>).
 
 Start the backend before opening the frontend so API requests succeed. '@" \`\`\`
+
+
+
+# Deploying App
+
+
+
+## For Your Use Case: **CPack + GitHub Releases**
+
+Update your CMakeLists.txt:
+
+```
+# At the end of CMakeLists.txt
+install(TARGETS edemy_backend DESTINATION bin)
+
+set(CPACK_PACKAGE_NAME "Edemy")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VENDOR "YourName")
+set(CPACK_GENERATOR "ZIP;NSIS")
+include(CPack)
+
+```
+
+**Deploy:**
+
+```
+cmake --build build --config Release
+cpack --config build/CPackConfig.cmake
+# Creates Edemy-1.0.0-win64.zip
+
+```
+
+## **GitHub Releases** (Simple deployment)
+
+&#x20;
+
+Automate with GitHub Actions:
+
+```YAML
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ['v*']
+    
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          cmake -S backend -B build -G Ninja
+          cmake --build build --config Release
+      - name: Package
+        run: |
+          mkdir dist
+          cp build/edemy_backend.exe dist/
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+```
+
+**Push tag** → **auto-build** → **release artifact**

@@ -32,7 +32,7 @@ std::size_t computeLongestRelativeLength(const fs::path& root) {
     if (!fs::exists(root, ec) || !fs::is_directory(root, ec)) {
         return longest;
     }
-
+    // Measure the longest relative path length
     fs::recursive_directory_iterator it(
         root,
         fs::directory_options::skip_permission_denied,
@@ -40,6 +40,7 @@ std::size_t computeLongestRelativeLength(const fs::path& root) {
     );
     fs::recursive_directory_iterator end;
 
+    // Iterate through all entries
     while (!ec && it != end) {
         std::error_code relEc;
         auto rel = fs::relative(it->path(), root, relEc);
@@ -49,12 +50,13 @@ std::size_t computeLongestRelativeLength(const fs::path& root) {
                 longest = relStr.size();
             }
         }
-        it.increment(ec);
+        it.increment(ec); // Move to next entry
     }
-
+    // Done iterating
     return longest;
 }
 
+// Create a hex suffix from a size_t value
 std::string makeHashSuffix(std::size_t value, std::size_t maxLen) {
     std::ostringstream oss;
     oss << std::hex << std::nouppercase << value;
@@ -68,10 +70,11 @@ std::string makeHashSuffix(std::size_t value, std::size_t maxLen) {
     return hex;
 }
 
+// Sanitize folder name for Windows filesystem
 std::string sanitizeFolderName(const std::string& raw, std::size_t maxLen) {
     static constexpr char kInvalidChars[] = "[]<>:\"|?*";
     std::string sanitized;
-    sanitized.reserve(raw.size());
+    sanitized.reserve(raw.size()); // Reserve space to avoid multiple allocations
 
     for (char ch : raw) {
         if (std::iscntrl(static_cast<unsigned char>(ch)) ||
@@ -90,11 +93,11 @@ std::string sanitizeFolderName(const std::string& raw, std::size_t maxLen) {
     if (sanitized.empty()) {
         sanitized = "EdemyCopy";
     }
-
+    // If within limits, return as is
     if (maxLen == 0 || sanitized.size() <= maxLen) {
         return sanitized;
     }
-
+    // Need to trim and append hash suffix
     const std::size_t suffixBudget = maxLen > kMinSanitizedLength ? 8 : 6;
     std::string hash = makeHashSuffix(std::hash<std::string>{}(sanitized), suffixBudget);
 
@@ -115,14 +118,14 @@ std::string sanitizeFolderName(const std::string& raw, std::size_t maxLen) {
     if (trimmed.size() > maxLen) {
         trimmed.resize(maxLen);
     }
-
+    // Return the final sanitized folder name
     return trimmed;
 }
 
 std::size_t determineSanitizedLimit(const fs::path& base, const fs::path& sourceRoot) {
     const std::size_t baseLen = base.string().size();
     const std::size_t longestRel = computeLongestRelativeLength(sourceRoot);
-
+    // Quick check for immediate impossibility
     if (baseLen + 1 >= kWindowsSafePathLimit) {
         return kMinSanitizedLength;
     }
@@ -140,7 +143,7 @@ std::size_t determineSanitizedLimit(const fs::path& base, const fs::path& source
         return kMaxSanitizedLength;
     }
 
-    return available;
+    return available; // within limits
 }
 
 } // namespace
@@ -264,14 +267,14 @@ int main() {
 server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Response& res) {
     try {
         auto data = json::parse(req.body);
-
+        // Validate required fields
         if (!data.contains("drive") || !data.contains("folderName")) {
             json error = {{"error", "drive and folderName are required"}};
             res.status = 400;
             res.set_content(error.dump(), "application/json");
             return;
         }
-
+        // Extract string and validate parameters
         std::string drive = data["drive"].get<std::string>();
         std::string folderName = data["folderName"].get<std::string>();
 
@@ -281,11 +284,11 @@ server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Respons
             res.set_content(error.dump(), "application/json");
             return;
         }
-
+        // Use only the first character as drive letter
         if (drive.size() > 1) {
             drive = drive.substr(0, 1);
         }
-
+            //FIXME: Change hardcoded "/torrent" path
         fs::path srcPath = fs::path(drive + ":/torrent") / folderName;
         if (!fs::exists(srcPath)) {
             json error = {{"error", "Source not found"}, {"path", srcPath.string()}};
@@ -344,6 +347,7 @@ server.Post("/api/copy-folder", [](const httplib::Request& req, httplib::Respons
         std::thread([srcPath, dstPath, ctxPtr]() {
             try {
                 copyDirParallel(srcPath, dstPath, *ctxPtr);
+                // * Success log
                 std::cout << "[Copy] Done: " << ctxPtr->bytesDone.load() << " bytes\n";
             } catch (const std::exception& ex) {
                 std::cerr << "[Copy] Error: " << ex.what() << std::endl;
@@ -388,6 +392,41 @@ server.Get("/api/copy-progress", [](const httplib::Request&, httplib::Response& 
     }
 
     res.set_content(payload.dump(), "application/json");
+});
+// ? Api endpoint for BrowseLessons.tsx
+// Get list of courses from AppData
+server.Get("/api/courses", [](const httplib::Request&, httplib::Response& res) {
+    try {
+        std::string basePath = FileProcessor::getAppDataPath();
+        json courses = json::array();
+        
+        if (fs::exists(basePath)) {
+            for (const auto& entry : fs::directory_iterator(basePath)) {
+                if (entry.is_directory()) {
+                    json course = {
+                        {"name", entry.path().filename().string()},
+                        {"path", entry.path().string()}
+                    };
+                    
+                    // Count files in directory
+                    int fileCount = 0;
+                    for (const auto& _ : fs::recursive_directory_iterator(entry.path())) {
+                        if (fs::is_regular_file(_)) fileCount++;
+                    }
+                    course["fileCount"] = fileCount;
+                    
+                    courses.push_back(course);
+                }
+            }
+        }
+        
+        json response = {{"courses", courses}};
+        res.set_content(response.dump(), "application/json");
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.status = 500;
+        res.set_content(error.dump(), "application/json");
+    }
 });
 
  std::cout << "🚀 Edemy Backend Server starting on http://localhost:8080" << std::endl;

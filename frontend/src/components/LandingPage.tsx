@@ -14,8 +14,8 @@ export default function LandingPage() {
   };
 
   const handleBrowseLessons = () => {
-    console.log('Browse Lessons clicked');
-    alert('Browse Lessons button clicked!');
+    console.log('Loading Lessons Page');
+    navigate('/lessons');
   };
 
   const styles = getPageStyles(isDark);
